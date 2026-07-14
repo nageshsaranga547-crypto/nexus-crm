@@ -5,7 +5,7 @@ import { Dashboard, Contacts, Deals, Tasks, Settings, Login } from './pages';
 
 function ProtectedRoute({ children }) {
   const { state } = useCrm();
-  return state.isAuthenticated ? children : <Navigate to="/nexus-crm/login" replace />;
+  return state.isAuthenticated ? children : <Navigate to="/login" replace />;
 }
 
 function AppRoutes() {
@@ -13,21 +13,21 @@ function AppRoutes() {
 
   return (
     <Routes>
-      <Route path="/nexus-crm/login" element={<Login />} />
+      <Route path="/login" element={<Login />} />
       <Route
-        path="/nexus-crm/"
+        path="/"
         element={
           <ProtectedRoute>
             <Layout />
           </ProtectedRoute>
         }
       >
-        <Route index element={<Navigate to="/nexus-crm/dashboard" replace />} />
-        <Route path="nexus-crm/dashboard" element={<Dashboard />} />
-        <Route path="nexus-crm/contacts" element={<Contacts />} />
-        <Route path="nexus-crm/deals" element={<Deals />} />
-        <Route path="nexus-crm/tasks" element={<Tasks />} />
-        <Route path="nexus-crm/settings" element={<Settings />} />
+        <Route index element={<Navigate to="/dashboard" replace />} />
+        <Route path="dashboard" element={<Dashboard />} />
+        <Route path="contacts" element={<Contacts />} />
+        <Route path="deals" element={<Deals />} />
+        <Route path="tasks" element={<Tasks />} />
+        <Route path="settings" element={<Settings />} />
       </Route>
     </Routes>
   );
@@ -35,11 +35,11 @@ function AppRoutes() {
 
 function App() {
   return (
-    <BrowserRouter basename="/nexus-crm">
-      <CrmProvider>
+    <CrmProvider>
+      <BrowserRouter basename="/nexus-crm">
         <AppRoutes />
-      </CrmProvider>
-    </BrowserRouter>
+      </BrowserRouter>
+    </CrmProvider>
   );
 }
 
