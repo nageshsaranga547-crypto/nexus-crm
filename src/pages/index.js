@@ -1,6 +1,12 @@
 export { Dashboard } from './Dashboard';
 export { Contacts } from './Contacts';
+export { Companies } from './Companies';
 export { Deals } from './Deals';
 export { Tasks } from './Tasks';
+export { Calendar } from './Calendar';
+export { Calls } from './Calls';
+export { Emails } from './Emails';
+export { Quotes } from './Quotes';
+export { Reports } from './Reports';
 export { Settings } from './Settings';
 export { Login } from './Login';

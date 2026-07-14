@@ -1,264 +1,236 @@
 import { useState } from 'react';
-import { User, Building2, Shield, Bell, Key, Users, Globe } from 'lucide-react';
-import { useCrm } from '../context/CrmContext';
-import { Card, CardBody, CardHeader, Button, Input, Avatar, Badge } from '../components/ui';
+import { User, Building2, Bell, Shield, Palette, Users, Save } from 'lucide-react';
 
 const tabs = [
   { id: 'profile', label: 'Profile', icon: User },
   { id: 'workspace', label: 'Workspace', icon: Building2 },
-  { id: 'team', label: 'Team', icon: Users },
   { id: 'notifications', label: 'Notifications', icon: Bell },
   { id: 'security', label: 'Security', icon: Shield },
+  { id: 'team', label: 'Team', icon: Users },
 ];
 
 export function Settings() {
-  const { state } = useCrm();
   const [activeTab, setActiveTab] = useState('profile');
-  const [profileData, setProfileData] = useState({
-    name: state.currentUser?.name || '',
-    email: state.currentUser?.email || '',
-    role: state.currentUser?.role || 'member',
-    phone: '+1 (555) 123-4567',
-    timezone: 'America/New_York',
-  });
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
+      {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-[#1E293B]">Settings</h1>
-        <p className="text-[#64748B] mt-1">Manage your account and workspace settings</p>
+        <h1 className="text-2xl font-semibold text-[#1A1A1A]">Settings</h1>
+        <p className="text-sm text-[#757575]">Manage your account and preferences</p>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6">
-        {/* Sidebar */}
-        <div className="lg:w-64 flex-shrink-0">
-          <Card>
-            <nav className="p-2">
-              {tabs.map((tab) => {
-                const Icon = tab.icon;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                      activeTab === tab.id
-                        ? 'bg-[#2563EB] text-white'
-                        : 'text-[#64748B] hover:bg-[#F1F5F9] hover:text-[#1E293B]'
-                    }`}
-                  >
-                    <Icon size={18} />
-                    {tab.label}
-                  </button>
-                );
-              })}
-            </nav>
-          </Card>
+      <div className="flex gap-6">
+        {/* Tabs */}
+        <div className="w-56 flex-shrink-0">
+          <div className="bg-white rounded-lg border border-[#E5E5E5] p-2">
+            {tabs.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${
+                  activeTab === tab.id
+                    ? 'bg-[#FF7A59] text-white'
+                    : 'text-[#757575] hover:bg-[#F5F5F5]'
+                }`}
+              >
+                <tab.icon size={18} />
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Content */}
-        <div className="flex-1">
+        <div className="flex-1 bg-white rounded-lg border border-[#E5E5E5] p-6">
           {activeTab === 'profile' && (
-            <Card>
-              <CardHeader>
-                <h2 className="font-semibold text-[#1E293B]">Profile Information</h2>
-                <p className="text-sm text-[#64748B] mt-1">Update your personal information</p>
-              </CardHeader>
-              <CardBody className="space-y-6">
-                <div className="flex items-center gap-4">
-                  <Avatar name={profileData.name} size="xl" />
-                  <div>
-                    <Button variant="secondary" size="sm">Change Photo</Button>
-                    <p className="text-xs text-[#94A3B8] mt-2">JPG, PNG or GIF. Max 2MB</p>
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-lg font-semibold mb-4">Profile Settings</h2>
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="w-20 h-20 rounded-full bg-[#FF7A59] flex items-center justify-center text-white text-2xl font-medium">
+                    JD
                   </div>
+                  <button className="px-4 py-2 border border-[#E5E5E5] rounded-lg text-sm hover:bg-[#F5F5F5]">
+                    Change Photo
+                  </button>
                 </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Input
-                    label="Full Name"
-                    value={profileData.name}
-                    onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
-                  />
-                  <Input
-                    label="Email"
-                    type="email"
-                    value={profileData.email}
-                    onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Input
-                    label="Phone"
-                    value={profileData.phone}
-                    onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
-                  />
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wide mb-1.5">
-                      Timezone
-                    </label>
-                    <select
-                      value={profileData.timezone}
-                      onChange={(e) => setProfileData({ ...profileData, timezone: e.target.value })}
-                      className="w-full h-10 px-3 rounded-lg border border-[#E2E8F0] bg-white text-[#1E293B] text-sm"
-                    >
-                      <option value="America/New_York">Eastern Time (ET)</option>
-                      <option value="America/Chicago">Central Time (CT)</option>
-                      <option value="America/Denver">Mountain Time (MT)</option>
-                      <option value="America/Los_Angeles">Pacific Time (PT)</option>
-                      <option value="Europe/London">London (GMT)</option>
-                      <option value="Europe/Paris">Paris (CET)</option>
+                    <label className="block text-xs font-medium text-[#757575] mb-1">First Name</label>
+                    <input type="text" defaultValue="John" className="w-full px-3 py-2 border border-[#E5E5E5] rounded-lg text-sm focus:outline-none focus:border-[#FF7A59]" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-[#757575] mb-1">Last Name</label>
+                    <input type="text" defaultValue="Doe" className="w-full px-3 py-2 border border-[#E5E5E5] rounded-lg text-sm focus:outline-none focus:border-[#FF7A59]" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-[#757575] mb-1">Email</label>
+                    <input type="email" defaultValue="john@nexuscrm.com" className="w-full px-3 py-2 border border-[#E5E5E5] rounded-lg text-sm focus:outline-none focus:border-[#FF7A59]" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-[#757575] mb-1">Phone</label>
+                    <input type="tel" defaultValue="+1 (555) 123-4567" className="w-full px-3 py-2 border border-[#E5E5E5] rounded-lg text-sm focus:outline-none focus:border-[#FF7A59]" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-[#757575] mb-1">Job Title</label>
+                    <input type="text" defaultValue="Sales Manager" className="w-full px-3 py-2 border border-[#E5E5E5] rounded-lg text-sm focus:outline-none focus:border-[#FF7A59]" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-[#757575] mb-1">Timezone</label>
+                    <select className="w-full px-3 py-2 border border-[#E5E5E5] rounded-lg text-sm focus:outline-none focus:border-[#FF7A59]">
+                      <option>America/Los_Angeles</option>
+                      <option>America/New_York</option>
+                      <option>Europe/London</option>
                     </select>
                   </div>
                 </div>
-
-                <div className="flex justify-end pt-4 border-t border-[#E2E8F0]">
-                  <Button>Save Changes</Button>
-                </div>
-              </CardBody>
-            </Card>
+              </div>
+              <div className="flex justify-end">
+                <button className="flex items-center gap-2 px-4 py-2 bg-[#FF7A59] text-white rounded-lg hover:bg-[#E85A3C] transition-colors text-sm font-medium">
+                  <Save size={16} />
+                  Save Changes
+                </button>
+              </div>
+            </div>
           )}
 
           {activeTab === 'workspace' && (
-            <Card>
-              <CardHeader>
-                <h2 className="font-semibold text-[#1E293B]">Workspace Settings</h2>
-                <p className="text-sm text-[#64748B] mt-1">Manage your workspace details</p>
-              </CardHeader>
-              <CardBody className="space-y-6">
-                <div className="flex items-center justify-between p-4 bg-[#F8FAFC] rounded-xl">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#10B981] to-[#059669] flex items-center justify-center text-white font-bold">
-                      NS
-                    </div>
-                    <div>
-                      <p className="font-medium text-[#1E293B]">{state.workspace.name}</p>
-                      <p className="text-sm text-[#64748B]">Created {state.workspace.createdAt}</p>
-                    </div>
-                  </div>
-                  <Badge variant="success">{state.workspace.plan}</Badge>
-                </div>
-
-                <Input
-                  label="Workspace Name"
-                  defaultValue={state.workspace.name}
-                />
-
-                <div>
-                  <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wide mb-1.5">
-                    Industry
-                  </label>
-                  <select className="w-full h-10 px-3 rounded-lg border border-[#E2E8F0] bg-white text-[#1E293B] text-sm">
-                    <option>Technology</option>
-                    <option>Finance</option>
-                    <option>Healthcare</option>
-                    <option>Retail</option>
-                    <option>Education</option>
-                    <option>Other</option>
-                  </select>
-                </div>
-
-                <div className="flex justify-end pt-4 border-t border-[#E2E8F0]">
-                  <Button>Save Changes</Button>
-                </div>
-              </CardBody>
-            </Card>
-          )}
-
-          {activeTab === 'team' && (
-            <Card>
-              <CardHeader className="flex items-center justify-between">
-                <div>
-                  <h2 className="font-semibold text-[#1E293B]">Team Members</h2>
-                  <p className="text-sm text-[#64748B] mt-1">{state.users.length} members in this workspace</p>
-                </div>
-                <Button>
-                  <Users size={16} className="mr-2" />
-                  Invite
-                </Button>
-              </CardHeader>
-              <CardBody>
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-lg font-semibold mb-4">Workspace Settings</h2>
                 <div className="space-y-4">
-                  {state.users.map((user) => (
-                    <div key={user.id} className="flex items-center justify-between p-4 bg-[#F8FAFC] rounded-xl">
-                      <div className="flex items-center gap-4">
-                        <Avatar name={user.name} size="md" />
-                        <div>
-                          <p className="font-medium text-[#1E293B]">{user.name}</p>
-                          <p className="text-sm text-[#64748B]">{user.email}</p>
-                        </div>
-                      </div>
-                      <Badge variant={user.role === 'admin' ? 'primary' : 'default'}>
-                        {user.role === 'admin' ? 'Admin' : 'Member'}
-                      </Badge>
-                    </div>
-                  ))}
+                  <div>
+                    <label className="block text-xs font-medium text-[#757575] mb-1">Workspace Name</label>
+                    <input type="text" defaultValue="Nexus CRM" className="w-full px-3 py-2 border border-[#E5E5E5] rounded-lg text-sm focus:outline-none focus:border-[#FF7A59]" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-[#757575] mb-1">Default Currency</label>
+                    <select className="w-full px-3 py-2 border border-[#E5E5E5] rounded-lg text-sm focus:outline-none focus:border-[#FF7A59]">
+                      <option>USD ($)</option>
+                      <option>EUR (€)</option>
+                      <option>GBP (£)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-[#757575] mb-1">Date Format</label>
+                    <select className="w-full px-3 py-2 border border-[#E5E5E5] rounded-lg text-sm focus:outline-none focus:border-[#FF7A59]">
+                      <option>MM/DD/YYYY</option>
+                      <option>DD/MM/YYYY</option>
+                      <option>YYYY-MM-DD</option>
+                    </select>
+                  </div>
                 </div>
-              </CardBody>
-            </Card>
+              </div>
+              <div className="flex justify-end">
+                <button className="flex items-center gap-2 px-4 py-2 bg-[#FF7A59] text-white rounded-lg hover:bg-[#E85A3C] transition-colors text-sm font-medium">
+                  <Save size={16} />
+                  Save Changes
+                </button>
+              </div>
+            </div>
           )}
 
           {activeTab === 'notifications' && (
-            <Card>
-              <CardHeader>
-                <h2 className="font-semibold text-[#1E293B]">Notification Preferences</h2>
-                <p className="text-sm text-[#64748B] mt-1">Choose how you want to be notified</p>
-              </CardHeader>
-              <CardBody className="space-y-6">
-                {[
-                  { title: 'Deal updates', description: 'Get notified when deals move stages', enabled: true },
-                  { title: 'Task reminders', description: 'Receive reminders for upcoming tasks', enabled: true },
-                  { title: 'New contacts', description: 'Notifications for new contact additions', enabled: false },
-                  { title: 'Weekly reports', description: 'Receive weekly pipeline summaries', enabled: true },
-                  { title: 'Email notifications', description: 'Get important updates via email', enabled: true },
-                ].map((item, index) => (
-                  <div key={index} className="flex items-center justify-between py-3 border-b border-[#E2E8F0] last:border-0">
-                    <div>
-                      <p className="text-sm font-medium text-[#1E293B]">{item.title}</p>
-                      <p className="text-xs text-[#64748B]">{item.description}</p>
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-lg font-semibold mb-4">Notification Preferences</h2>
+                <div className="space-y-4">
+                  {[
+                    { label: 'New contact assigned', desc: 'Get notified when a new contact is assigned to you' },
+                    { label: 'Deal stage changed', desc: 'Get notified when a deal moves to a new stage' },
+                    { label: 'Task due reminder', desc: 'Get reminded about upcoming task deadlines' },
+                    { label: 'Daily digest', desc: 'Receive a daily summary of your CRM activity' },
+                    { label: 'Weekly report', desc: 'Receive weekly sales and activity reports' },
+                  ].map((item, idx) => (
+                    <div key={idx} className="flex items-center justify-between py-3 border-b border-[#E5E5E5] last:border-0">
+                      <div>
+                        <p className="font-medium text-sm">{item.label}</p>
+                        <p className="text-xs text-[#757575]">{item.desc}</p>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" className="sr-only peer" defaultChecked />
+                        <div className="w-11 h-6 bg-[#E5E5E5] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#FF7A59]"></div>
+                      </label>
                     </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input type="checkbox" className="sr-only peer" defaultChecked={item.enabled} />
-                      <div className="w-11 h-6 bg-[#E2E8F0] peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#2563EB]/20 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#2563EB]"></div>
-                    </label>
-                  </div>
-                ))}
-              </CardBody>
-            </Card>
+                  ))}
+                </div>
+              </div>
+              <div className="flex justify-end">
+                <button className="flex items-center gap-2 px-4 py-2 bg-[#FF7A59] text-white rounded-lg hover:bg-[#E85A3C] transition-colors text-sm font-medium">
+                  <Save size={16} />
+                  Save Changes
+                </button>
+              </div>
+            </div>
           )}
 
           {activeTab === 'security' && (
-            <Card>
-              <CardHeader>
-                <h2 className="font-semibold text-[#1E293B]">Security Settings</h2>
-                <p className="text-sm text-[#64748B] mt-1">Manage your account security</p>
-              </CardHeader>
-              <CardBody className="space-y-6">
-                <div className="p-4 bg-[#F8FAFC] rounded-xl">
-                  <div className="flex items-center gap-3 mb-4">
-                    <Key size={20} className="text-[#64748B]" />
-                    <p className="font-medium text-[#1E293B]">Password</p>
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-lg font-semibold mb-4">Security Settings</h2>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-medium text-[#757575] mb-1">Current Password</label>
+                    <input type="password" className="w-full px-3 py-2 border border-[#E5E5E5] rounded-lg text-sm focus:outline-none focus:border-[#FF7A59]" />
                   </div>
-                  <p className="text-sm text-[#64748B] mb-4">Last changed 3 months ago</p>
-                  <Button variant="secondary">Change Password</Button>
-                </div>
-
-                <div className="p-4 bg-[#F8FAFC] rounded-xl">
-                  <div className="flex items-center gap-3 mb-4">
-                    <Shield size={20} className="text-[#64748B]" />
-                    <p className="font-medium text-[#1E293B]">Two-Factor Authentication</p>
+                  <div>
+                    <label className="block text-xs font-medium text-[#757575] mb-1">New Password</label>
+                    <input type="password" className="w-full px-3 py-2 border border-[#E5E5E5] rounded-lg text-sm focus:outline-none focus:border-[#FF7A59]" />
                   </div>
-                  <p className="text-sm text-[#64748B] mb-4">Add an extra layer of security to your account</p>
-                  <Button variant="secondary">Enable 2FA</Button>
+                  <div>
+                    <label className="block text-xs font-medium text-[#757575] mb-1">Confirm New Password</label>
+                    <input type="password" className="w-full px-3 py-2 border border-[#E5E5E5] rounded-lg text-sm focus:outline-none focus:border-[#FF7A59]" />
+                  </div>
+                  <div className="flex items-center justify-between py-3 border-t border-[#E5E5E5]">
+                    <div>
+                      <p className="font-medium text-sm">Two-Factor Authentication</p>
+                      <p className="text-xs text-[#757575]">Add an extra layer of security</p>
+                    </div>
+                    <button className="px-4 py-2 border border-[#E5E5E5] rounded-lg text-sm hover:bg-[#F5F5F5]">
+                      Enable
+                    </button>
+                  </div>
                 </div>
+              </div>
+              <div className="flex justify-end">
+                <button className="flex items-center gap-2 px-4 py-2 bg-[#FF7A59] text-white rounded-lg hover:bg-[#E85A3C] transition-colors text-sm font-medium">
+                  <Save size={16} />
+                  Update Password
+                </button>
+              </div>
+            </div>
+          )}
 
-                <div className="p-4 bg-[#FEF2F2] rounded-xl border border-[#FECACA]">
-                  <p className="font-medium text-[#DC2626]">Danger Zone</p>
-                  <p className="text-sm text-[#64748B] mt-1 mb-4">Once you delete your account, there is no going back.</p>
-                  <Button variant="danger">Delete Account</Button>
-                </div>
-              </CardBody>
-            </Card>
+          {activeTab === 'team' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold">Team Members</h2>
+                <button className="px-4 py-2 bg-[#FF7A59] text-white rounded-lg hover:bg-[#E85A3C] transition-colors text-sm font-medium">
+                  Invite Member
+                </button>
+              </div>
+              <div className="space-y-3">
+                {[
+                  { name: 'John Doe', email: 'john@nexuscrm.com', role: 'Admin' },
+                  { name: 'Sarah Smith', email: 'sarah@nexuscrm.com', role: 'Member' },
+                  { name: 'Mike Johnson', email: 'mike@nexuscrm.com', role: 'Member' },
+                ].map((member, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-4 bg-[#F5F5F5] rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-[#FF7A59] flex items-center justify-center text-white text-sm font-medium">
+                        {member.name.split(' ').map(n => n[0]).join('')}
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">{member.name}</p>
+                        <p className="text-xs text-[#757575]">{member.email}</p>
+                      </div>
+                    </div>
+                    <span className="px-2 py-1 bg-white rounded-full text-xs font-medium">{member.role}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         </div>
       </div>

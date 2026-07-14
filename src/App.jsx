@@ -1,43 +1,29 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { CrmProvider, useCrm } from './context/CrmContext';
+import { CrmProvider } from './context/CrmContext';
 import { Layout } from './components/layout';
-import { Dashboard, Contacts, Deals, Tasks, Settings, Login } from './pages';
-
-function ProtectedRoute({ children }) {
-  const { state } = useCrm();
-  return state.isAuthenticated ? children : <Navigate to="/login" replace />;
-}
-
-function AppRoutes() {
-  const { state } = useCrm();
-
-  return (
-    <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <Layout />
-          </ProtectedRoute>
-        }
-      >
-        <Route index element={<Navigate to="/dashboard" replace />} />
-        <Route path="dashboard" element={<Dashboard />} />
-        <Route path="contacts" element={<Contacts />} />
-        <Route path="deals" element={<Deals />} />
-        <Route path="tasks" element={<Tasks />} />
-        <Route path="settings" element={<Settings />} />
-      </Route>
-    </Routes>
-  );
-}
+import { Dashboard, Contacts, Companies, Deals, Tasks, Calendar, Calls, Emails, Quotes, Reports, Settings, Login } from './pages';
 
 function App() {
   return (
     <CrmProvider>
       <BrowserRouter basename="/nexus-crm">
-        <AppRoutes />
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/" element={<Layout />}>
+            <Route index element={<Navigate to="/dashboard" replace />} />
+            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="contacts" element={<Contacts />} />
+            <Route path="companies" element={<Companies />} />
+            <Route path="deals" element={<Deals />} />
+            <Route path="tasks" element={<Tasks />} />
+            <Route path="calendar" element={<Calendar />} />
+            <Route path="calls" element={<Calls />} />
+            <Route path="emails" element={<Emails />} />
+            <Route path="quotes" element={<Quotes />} />
+            <Route path="reports" element={<Reports />} />
+            <Route path="settings" element={<Settings />} />
+          </Route>
+        </Routes>
       </BrowserRouter>
     </CrmProvider>
   );

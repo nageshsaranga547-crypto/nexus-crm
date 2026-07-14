@@ -1,237 +1,181 @@
-import { Link } from 'react-router-dom';
-import { 
-  TrendingUp, Users, DollarSign, CheckSquare, 
-  ArrowRight, Activity, Calendar
-} from 'lucide-react';
-import { useCrm } from '../context/CrmContext';
-import { Card, CardBody, Badge } from '../components/ui';
-import { formatCurrency, formatRelativeTime, getActivityIcon } from '../utils/helpers';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
+import { TrendingUp, Users, Building2, DollarSign, CheckSquare, Mail, Phone, Calendar } from 'lucide-react';
+import { dashboardMetrics, deals, tasks, activities, getContactById, pipelineStats } from '../data/mockData';
+
+const monthlyData = [
+  { month: 'Jan', deals: 4, revenue: 180000 },
+  { month: 'Feb', deals: 6, revenue: 320000 },
+  { month: 'Mar', deals: 8, revenue: 680000 },
+  { month: 'Apr', deals: 5, revenue: 520000 },
+  { month: 'May', deals: 7, revenue: 875000 },
+  { month: 'Jun', deals: 9, revenue: 950000 },
+];
+
+const recentDeals = deals.filter(d => d.stage !== 'closedLost').slice(0, 5);
+const upcomingTasks = tasks.filter(t => t.status !== 'completed').slice(0, 4);
 
 export function Dashboard() {
-  const { state } = useCrm();
-  const { contacts, deals, tasks, activities } = state;
-
-  const totalDeals = deals.length;
-  const totalValue = deals.reduce((sum, deal) => sum + deal.value, 0);
-  const totalContacts = contacts.length;
-  const tasksDue = tasks.filter(t => t.status === 'pending' && new Date(t.dueDate) <= new Date()).length;
-
-  const pipelineData = [
-    { name: 'Lead', value: deals.filter(d => d.stage === 'Lead').reduce((sum, d) => sum + d.value, 0) },
-    { name: 'Qualified', value: deals.filter(d => d.stage === 'Qualified').reduce((sum, d) => sum + d.value, 0) },
-    { name: 'Proposal', value: deals.filter(d => d.stage === 'Proposal').reduce((sum, d) => sum + d.value, 0) },
-    { name: 'Negotiation', value: deals.filter(d => d.stage === 'Negotiation').reduce((sum, d) => sum + d.value, 0) },
-    { name: 'Won', value: deals.filter(d => d.stage === 'Won').reduce((sum, d) => sum + d.value, 0) },
-    { name: 'Lost', value: deals.filter(d => d.stage === 'Lost').reduce((sum, d) => sum + d.value, 0) },
+  const metricCards = [
+    { label: 'Open Deals', value: dashboardMetrics.openDeals, change: dashboardMetrics.dealsChange, icon: DollarSign, color: '#FF7A59' },
+    { label: 'Total Contacts', value: dashboardMetrics.totalContacts, change: dashboardMetrics.contactsChange, icon: Users, color: '#3B86F0' },
+    { label: 'Companies', value: dashboardMetrics.totalCompanies, change: dashboardMetrics.companiesChange, icon: Building2, color: '#00A78E' },
+    { label: 'Tasks Due Today', value: dashboardMetrics.tasksDueToday, change: dashboardMetrics.tasksChange, icon: CheckSquare, color: '#F5A623' },
   ];
-
-  const stageColors = ['#94A3B8', '#3B82F6', '#8B5CF6', '#F59E0B', '#22C55E', '#EF4444'];
-
-  const COLORS = ['#2563EB', '#8B5CF6', '#EC4899', '#10B981', '#F59E0B'];
-
-  const pieData = [
-    { name: 'High', value: tasks.filter(t => t.priority === 'high').length },
-    { name: 'Medium', value: tasks.filter(t => t.priority === 'medium').length },
-    { name: 'Low', value: tasks.filter(t => t.priority === 'low').length },
-  ];
-
-  const upcomingTasks = tasks
-    .filter(t => t.status === 'pending')
-    .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))
-    .slice(0, 5);
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[#1E293B]">Dashboard</h1>
-          <p className="text-[#64748B] mt-1">Welcome back! Here's what's happening today.</p>
+          <h1 className="text-2xl font-semibold text-[#1A1A1A]">Dashboard</h1>
+          <p className="text-sm text-[#757575]">Welcome back, John. Here's what's happening.</p>
+        </div>
+        <div className="flex gap-3">
+          <select className="px-4 py-2 border border-[#E5E5E5] rounded-lg text-sm bg-white">
+            <option>This Month</option>
+            <option>Last Month</option>
+            <option>This Quarter</option>
+          </select>
         </div>
       </div>
 
-      {/* Metrics Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="!p-0">
-          <div className="p-5">
-            <div className="flex items-center justify-between">
-              <div className="w-12 h-12 rounded-xl bg-[#EFF6FF] flex items-center justify-center">
-                <TrendingUp size={24} className="text-[#2563EB]" />
+      {/* Metric Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {metricCards.map((metric, idx) => (
+          <div key={idx} className="bg-white rounded-lg border border-[#E5E5E5] p-5">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-2 rounded-lg" style={{ backgroundColor: `${metric.color}15` }}>
+                <metric.icon size={20} style={{ color: metric.color }} />
               </div>
-              <Badge variant="success">+12%</Badge>
+              <span className="text-xs text-[#00A78E] bg-[#E6F9F6] px-2 py-1 rounded-full flex items-center gap-1">
+                <TrendingUp size={12} />
+                +{metric.change}%
+              </span>
             </div>
-            <p className="text-[#64748B] text-sm mt-4">Active Deals</p>
-            <p className="text-2xl font-bold text-[#1E293B] mt-1">{totalDeals}</p>
+            <p className="text-2xl font-bold text-[#1A1A1A]">{metric.value}</p>
+            <p className="text-sm text-[#757575]">{metric.label}</p>
           </div>
-        </Card>
-
-        <Card className="!p-0">
-          <div className="p-5">
-            <div className="flex items-center justify-between">
-              <div className="w-12 h-12 rounded-xl bg-[#ECFDF5] flex items-center justify-center">
-                <DollarSign size={24} className="text-[#10B981]" />
-              </div>
-              <Badge variant="success">+8%</Badge>
-            </div>
-            <p className="text-[#64748B] text-sm mt-4">Pipeline Value</p>
-            <p className="text-2xl font-bold text-[#1E293B] mt-1">{formatCurrency(totalValue)}</p>
-          </div>
-        </Card>
-
-        <Card className="!p-0">
-          <div className="p-5">
-            <div className="flex items-center justify-between">
-              <div className="w-12 h-12 rounded-xl bg-[#FEF3C7] flex items-center justify-center">
-                <Users size={24} className="text-[#F59E0B]" />
-              </div>
-            </div>
-            <p className="text-[#64748B] text-sm mt-4">Total Contacts</p>
-            <p className="text-2xl font-bold text-[#1E293B] mt-1">{totalContacts}</p>
-          </div>
-        </Card>
-
-        <Card className="!p-0">
-          <div className="p-5">
-            <div className="flex items-center justify-between">
-              <div className="w-12 h-12 rounded-xl bg-[#FEE2E2] flex items-center justify-center">
-                <CheckSquare size={24} className="text-[#EF4444]" />
-              </div>
-              <Badge variant="danger">{tasksDue} due</Badge>
-            </div>
-            <p className="text-[#64748B] text-sm mt-4">Tasks Due</p>
-            <p className="text-2xl font-bold text-[#1E293B] mt-1">{tasksDue}</p>
-          </div>
-        </Card>
+        ))}
       </div>
 
       {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Pipeline Chart */}
-        <Card className="lg:col-span-2">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-[#E2E8F0]">
-            <h2 className="font-semibold text-[#1E293B]">Pipeline Overview</h2>
-            <Link to="/deals" className="text-sm text-[#2563EB] hover:text-[#1D4ED8] flex items-center gap-1">
-              View Pipeline <ArrowRight size={16} />
-            </Link>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Revenue Chart */}
+        <div className="bg-white rounded-lg border border-[#E5E5E5] p-6">
+          <h3 className="text-base font-semibold mb-4">Revenue & Deals</h3>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={monthlyData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E5E5E5" />
+                <XAxis dataKey="month" stroke="#757575" fontSize={12} />
+                <YAxis stroke="#757575" fontSize={12} />
+                <Tooltip />
+                <Line type="monotone" dataKey="revenue" stroke="#FF7A59" strokeWidth={2} name="Revenue ($)" />
+                <Line type="monotone" dataKey="deals" stroke="#3B86F0" strokeWidth={2} name="Deals" />
+              </LineChart>
+            </ResponsiveContainer>
           </div>
-          <CardBody>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={pipelineData} layout="vertical">
-                  <XAxis type="number" tickFormatter={(v) => `$${v/1000}k`} />
-                  <YAxis type="category" dataKey="name" width={80} />
-                  <Tooltip 
-                    formatter={(value) => formatCurrency(value)}
-                    contentStyle={{ borderRadius: '8px', border: '1px solid #E2E8F0' }}
-                  />
-                  <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                    {pipelineData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={stageColors[index]} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardBody>
-        </Card>
+        </div>
 
-        {/* Task Priority Distribution */}
-        <Card>
-          <div className="flex items-center justify-between px-5 py-4 border-b border-[#E2E8F0]">
-            <h2 className="font-semibold text-[#1E293B]">Task Priority</h2>
-            <Link to="/tasks" className="text-sm text-[#2563EB] hover:text-[#1D4ED8] flex items-center gap-1">
-              View All <ArrowRight size={16} />
-            </Link>
+        {/* Pipeline Overview */}
+        <div className="bg-white rounded-lg border border-[#E5E5E5] p-6">
+          <h3 className="text-base font-semibold mb-4">Pipeline Overview</h3>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={pipelineStats.filter(s => !['closedWon', 'closedLost'].includes(s.id))}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E5E5E5" />
+                <XAxis dataKey="name" stroke="#757575" fontSize={10} angle={-20} textAnchor="end" height={60} />
+                <YAxis stroke="#757575" fontSize={12} />
+                <Tooltip formatter={(value) => `$${(value / 1000).toFixed(0)}K`} />
+                <Bar dataKey="totalValue" fill="#FF7A59" radius={[4, 4, 0, 0]} name="Value" />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
-          <CardBody>
-            <div className="h-48">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={pieData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={70}
-                    paddingAngle={4}
-                    dataKey="value"
-                  >
-                    {pieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="flex justify-center gap-4 mt-2">
-              {pieData.map((item, index) => (
-                <div key={item.name} className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index] }} />
-                  <span className="text-xs text-[#64748B]">{item.name}: {item.value}</span>
-                </div>
-              ))}
-            </div>
-          </CardBody>
-        </Card>
+        </div>
       </div>
 
       {/* Bottom Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Activities */}
-        <Card>
-          <div className="flex items-center justify-between px-5 py-4 border-b border-[#E2E8F0]">
-            <h2 className="font-semibold text-[#1E293B]">Recent Activity</h2>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Recent Deals */}
+        <div className="bg-white rounded-lg border border-[#E5E5E5] p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-base font-semibold">Recent Deals</h3>
+            <a href="/deals" className="text-sm text-[#FF7A59] hover:underline">View all</a>
           </div>
-          <div className="divide-y divide-[#E2E8F0]">
-            {activities.slice(0, 6).map((activity) => (
-              <div key={activity.id} className="px-5 py-3 flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-[#F1F5F9] flex items-center justify-center text-sm flex-shrink-0">
-                  {getActivityIcon(activity.type)}
+          <div className="space-y-4">
+            {recentDeals.map(deal => {
+              const contact = getContactById(deal.contactId);
+              return (
+                <div key={deal.id} className="flex items-center justify-between py-2 border-b border-[#E5E5E5] last:border-0">
+                  <div>
+                    <p className="font-medium text-sm">{deal.title}</p>
+                    <p className="text-xs text-[#757575]">{contact ? `${contact.firstName} ${contact.lastName}` : 'Unknown'}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold text-sm">${(deal.amount / 1000).toFixed(0)}K</p>
+                    <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: pipelineStats.find(s => s.id === deal.stage)?.color + '20', color: pipelineStats.find(s => s.id === deal.stage)?.color }}>
+                      {deal.stage.replace(/([A-Z])/g, ' $1').trim()}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-[#1E293B]">{activity.description}</p>
-                  {activity.amount && (
-                    <p className="text-sm font-medium text-[#10B981]">{formatCurrency(activity.amount)}</p>
-                  )}
-                  <p className="text-xs text-[#94A3B8] mt-1">{formatRelativeTime(activity.timestamp)}</p>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Upcoming Tasks */}
+        <div className="bg-white rounded-lg border border-[#E5E5E5] p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-base font-semibold">Upcoming Tasks</h3>
+            <a href="/tasks" className="text-sm text-[#FF7A59] hover:underline">View all</a>
+          </div>
+          <div className="space-y-3">
+            {upcomingTasks.map(task => (
+              <div key={task.id} className="flex items-start gap-3 py-2 border-b border-[#E5E5E5] last:border-0">
+                <div className={`w-2 h-2 rounded-full mt-2 ${
+                  task.priority === 'high' ? 'bg-[#E52E33]' :
+                  task.priority === 'medium' ? 'bg-[#F5A623]' : 'bg-[#00A78E]'
+                }`} />
+                <div className="flex-1">
+                  <p className="font-medium text-sm">{task.title}</p>
+                  <p className="text-xs text-[#757575] flex items-center gap-1 mt-1">
+                    <Calendar size={12} />
+                    {task.dueDate}
+                  </p>
                 </div>
               </div>
             ))}
           </div>
-        </Card>
+        </div>
 
-        {/* Upcoming Tasks */}
-        <Card>
-          <div className="flex items-center justify-between px-5 py-4 border-b border-[#E2E8F0]">
-            <h2 className="font-semibold text-[#1E293B]">Upcoming Tasks</h2>
-            <Link to="/tasks" className="text-sm text-[#2563EB] hover:text-[#1D4ED8] flex items-center gap-1">
-              View All <ArrowRight size={16} />
-            </Link>
-          </div>
-          <div className="divide-y divide-[#E2E8F0]">
-            {upcomingTasks.length === 0 ? (
-              <div className="px-5 py-8 text-center">
-                <Calendar size={32} className="mx-auto text-[#CBD5E1] mb-2" />
-                <p className="text-sm text-[#64748B]">No upcoming tasks</p>
-              </div>
-            ) : (
-              upcomingTasks.map((task) => (
-                <div key={task.id} className="px-5 py-3 flex items-center gap-3">
-                  <div className={`w-2 h-2 rounded-full ${
-                    task.priority === 'high' ? 'bg-[#EF4444]' :
-                    task.priority === 'medium' ? 'bg-[#F59E0B]' : 'bg-[#22C55E]'
-                  }`} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-[#1E293B] truncate">{task.title}</p>
-                    <p className="text-xs text-[#94A3B8]">{task.dueDate}</p>
-                  </div>
+        {/* Activity Feed */}
+        <div className="bg-white rounded-lg border border-[#E5E5E5] p-6">
+          <h3 className="text-base font-semibold mb-4">Recent Activity</h3>
+          <div className="space-y-4">
+            {activities.slice(0, 5).map(activity => (
+              <div key={activity.id} className="flex gap-3">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                  activity.type === 'email' ? 'bg-[#3B86F0] bg-opacity-10' :
+                  activity.type === 'call' ? 'bg-[#00A78E] bg-opacity-10' :
+                  activity.type === 'meeting' ? 'bg-[#8F87F5] bg-opacity-10' :
+                  'bg-[#FF7A59] bg-opacity-10'
+                }`}>
+                  {activity.type === 'email' ? <Mail size={14} className="text-[#3B86F0]" /> :
+                   activity.type === 'call' ? <Phone size={14} className="text-[#00A78E]" /> :
+                   activity.type === 'meeting' ? <Calendar size={14} className="text-[#8F87F5]" /> :
+                   <DollarSign size={14} className="text-[#FF7A59]" />}
                 </div>
-              ))
-            )}
+                <div>
+                  <p className="text-sm font-medium">{activity.title}</p>
+                  <p className="text-xs text-[#757575]">{activity.description}</p>
+                  <p className="text-xs text-[#A0A0A0] mt-1">
+                    {new Date(activity.timestamp).toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+            ))}
           </div>
-        </Card>
+        </div>
       </div>
     </div>
   );

@@ -1,118 +1,191 @@
-import { NavLink, useLocation } from 'react-router-dom';
-import { 
-  LayoutDashboard, Users, Briefcase, CheckSquare, Settings, 
-  ChevronDown, LogOut, Zap, Menu, X
+import { NavLink } from 'react-router-dom';
+import {
+  LayoutDashboard,
+  Users,
+  Building2,
+  PieChart,
+  CheckSquare,
+  Calendar,
+  Phone,
+  Mail,
+  FileText,
+  BarChart3,
+  Settings,
+  ChevronDown,
+  ChevronRight,
+  HelpCircle,
+  LogOut,
 } from 'lucide-react';
 import { useState } from 'react';
-import { useCrm } from '../../context/CrmContext';
-import { classNames } from '../../utils/helpers';
 
-const navItems = [
-  { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { path: '/contacts', icon: Users, label: 'Contacts' },
-  { path: '/deals', icon: Briefcase, label: 'Deals' },
-  { path: '/tasks', icon: CheckSquare, label: 'Tasks' },
+const mainNavItems = [
+  { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { path: '/contacts', label: 'Contacts', icon: Users },
+  { path: '/companies', label: 'Companies', icon: Building2 },
+  { path: '/deals', label: 'Deals', icon: PieChart },
+  { path: '/tasks', label: 'Tasks', icon: CheckSquare },
+  { path: '/calendar', label: 'Calendar', icon: Calendar },
+  { path: '/calls', label: 'Calls', icon: Phone },
+  { path: '/emails', label: 'Emails', icon: Mail },
+  { path: '/quotes', label: 'Quotes', icon: FileText },
+  { path: '/reports', label: 'Reports', icon: BarChart3 },
 ];
 
 export function Sidebar() {
-  const { state } = useCrm();
-  const location = useLocation();
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [collapsedSections, setCollapsedSections] = useState({});
+
+  const toggleSection = (section) => {
+    setCollapsedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
 
   return (
-    <>
-      {/* Mobile menu button */}
-      <button
-        onClick={() => setMobileOpen(true)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-md"
-      >
-        <Menu size={20} />
-      </button>
-
-      {/* Mobile overlay */}
-      {mobileOpen && (
-        <div 
-          className="lg:hidden fixed inset-0 bg-black/50 z-40"
-          onClick={() => setMobileOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
-      <aside className={classNames(
-        'fixed lg:static inset-y-0 left-0 z-40 w-[260px] bg-[#0F172A] flex flex-col transition-transform duration-300',
-        mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-      )}>
-        {/* Logo */}
-        <div className="h-16 flex items-center justify-between px-5 border-b border-white/10">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#2563EB] to-[#10B981] flex items-center justify-center">
-              <Zap size={20} className="text-white" />
-            </div>
-            <span className="text-white font-bold text-lg">Nexus CRM</span>
+    <aside className="w-60 bg-[#2D2D2D] text-white flex flex-col h-screen fixed left-0 top-0">
+      {/* Logo */}
+      <div className="p-4 border-b border-[#404040]">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-[#FF7A59] rounded-lg flex items-center justify-center">
+            <span className="text-white font-bold text-sm">N</span>
           </div>
-          <button
-            onClick={() => setMobileOpen(false)}
-            className="lg:hidden text-white/60 hover:text-white"
+          <div>
+            <h1 className="font-semibold text-base">Nexus CRM</h1>
+            <p className="text-xs text-gray-400">Sales Hub</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Navigation */}
+      <nav className="flex-1 overflow-y-auto py-4">
+        {/* CRM Section */}
+        <div className="px-3 mb-2">
+          <div
+            className="flex items-center justify-between px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider cursor-pointer hover:text-white"
+            onClick={() => toggleSection('crm')}
           >
-            <X size={20} />
+            <span>CRM</span>
+            {collapsedSections.crm ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
+          </div>
+          {!collapsedSections.crm && (
+            <div className="space-y-1 mt-1">
+              {mainNavItems.slice(0, 5).map(item => (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${
+                      isActive
+                        ? 'bg-[#FF7A59] text-white'
+                        : 'text-gray-300 hover:bg-[#404040] hover:text-white'
+                    }`
+                  }
+                >
+                  <item.icon size={18} />
+                  <span>{item.label}</span>
+                </NavLink>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Sales Section */}
+        <div className="px-3 mb-2">
+          <div
+            className="flex items-center justify-between px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider cursor-pointer hover:text-white"
+            onClick={() => toggleSection('sales')}
+          >
+            <span>Sales</span>
+            {collapsedSections.sales ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
+          </div>
+          {!collapsedSections.sales && (
+            <div className="space-y-1 mt-1">
+              {mainNavItems.slice(5, 8).map(item => (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${
+                      isActive
+                        ? 'bg-[#FF7A59] text-white'
+                        : 'text-gray-300 hover:bg-[#404040] hover:text-white'
+                    }`
+                  }
+                >
+                  <item.icon size={18} />
+                  <span>{item.label}</span>
+                </NavLink>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Operations Section */}
+        <div className="px-3 mb-2">
+          <div
+            className="flex items-center justify-between px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider cursor-pointer hover:text-white"
+            onClick={() => toggleSection('operations')}
+          >
+            <span>Operations</span>
+            {collapsedSections.operations ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
+          </div>
+          {!collapsedSections.operations && (
+            <div className="space-y-1 mt-1">
+              {mainNavItems.slice(8).map(item => (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${
+                      isActive
+                        ? 'bg-[#FF7A59] text-white'
+                        : 'text-gray-300 hover:bg-[#404040] hover:text-white'
+                    }`
+                  }
+                >
+                  <item.icon size={18} />
+                  <span>{item.label}</span>
+                </NavLink>
+              ))}
+            </div>
+          )}
+        </div>
+      </nav>
+
+      {/* Bottom Section */}
+      <div className="border-t border-[#404040] p-3">
+        <NavLink
+          to="/settings"
+          className={({ isActive }) =>
+            `flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${
+              isActive
+                ? 'bg-[#FF7A59] text-white'
+                : 'text-gray-300 hover:bg-[#404040] hover:text-white'
+            }`
+          }
+        >
+          <Settings size={18} />
+          <span>Settings</span>
+        </NavLink>
+        <button className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm text-gray-300 hover:bg-[#404040] hover:text-white transition-colors">
+          <HelpCircle size={18} />
+          <span>Help & Support</span>
+        </button>
+
+        {/* User Profile */}
+        <div className="mt-3 flex items-center gap-3 px-3 py-2 rounded-md bg-[#404040]">
+          <div className="w-8 h-8 rounded-full bg-[#FF7A59] flex items-center justify-center text-sm font-medium">
+            JD
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate">John Doe</p>
+            <p className="text-xs text-gray-400 truncate">Sales Manager</p>
+          </div>
+          <button className="text-gray-400 hover:text-white">
+            <LogOut size={16} />
           </button>
         </div>
-
-        {/* Navigation */}
-        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = location.pathname === item.path;
-            return (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                onClick={() => setMobileOpen(false)}
-                className={classNames(
-                  'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150',
-                  isActive 
-                    ? 'bg-[#2563EB] text-white' 
-                    : 'text-white/60 hover:bg-white/5 hover:text-white'
-                )}
-              >
-                <Icon size={20} />
-                {item.label}
-              </NavLink>
-            );
-          })}
-        </nav>
-
-        {/* Bottom section */}
-        <div className="p-3 border-t border-white/10">
-          <NavLink
-            to="/settings"
-            onClick={() => setMobileOpen(false)}
-            className={classNames(
-              'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150',
-              location.pathname === '/settings'
-                ? 'bg-[#2563EB] text-white'
-                : 'text-white/60 hover:bg-white/5 hover:text-white'
-            )}
-          >
-            <Settings size={20} />
-            Settings
-          </NavLink>
-        </div>
-
-        {/* Workspace selector */}
-        <div className="p-3 border-t border-white/10">
-          <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#10B981] to-[#059669] flex items-center justify-center text-white text-xs font-bold">
-              NS
-            </div>
-            <div className="flex-1 text-left">
-              <p className="text-white text-sm font-medium truncate">{state.workspace.name}</p>
-              <p className="text-white/40 text-xs">{state.workspace.plan} Plan</p>
-            </div>
-            <ChevronDown size={16} className="text-white/40" />
-          </button>
-        </div>
-      </aside>
-    </>
+      </div>
+    </aside>
   );
 }

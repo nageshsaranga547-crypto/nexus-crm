@@ -1,394 +1,282 @@
 import { useState } from 'react';
-import { Plus, Check, Calendar, AlertCircle, Filter, MoreVertical, Edit2, Trash2, CheckCircle2 } from 'lucide-react';
-import { useTasks, useCrm } from '../context/CrmContext';
-import { Card, Button, Input, Textarea, Select, Modal, Badge, Avatar, EmptyState, ConfirmModal } from '../components/ui';
-import { formatDate, getPriorityColor, classNames } from '../utils/helpers';
+import { Search, Plus, Check, Calendar, User, X, LayoutGrid, List, Filter } from 'lucide-react';
+import { tasks as initialTasks } from '../data/mockData';
+
+const taskStatuses = ['not_started', 'in_progress', 'completed', 'deferred'];
+const taskPriorities = ['high', 'medium', 'low'];
 
 export function Tasks() {
-  const { tasks, addTask, updateTask, deleteTask, toggleTask } = useTasks();
-  const { state } = useCrm();
+  const [tasks, setTasks] = useState(initialTasks);
+  const [viewMode, setViewMode] = useState('list');
   const [showModal, setShowModal] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [editingTask, setEditingTask] = useState(null);
-  const [selectedTask, setSelectedTask] = useState(null);
-  const [activeMenu, setActiveMenu] = useState(null);
-  const [filter, setFilter] = useState('all');
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    dueDate: '',
-    priority: 'medium',
-    status: 'pending',
-    assigneeId: '',
-  });
-  const [errors, setErrors] = useState({});
+  const [filterPriority, setFilterPriority] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const filteredTasks = tasks.filter(task => {
-    if (filter === 'all') return true;
-    if (filter === 'pending') return task.status === 'pending';
-    if (filter === 'completed') return task.status === 'completed';
-    if (filter === 'high') return task.priority === 'high' && task.status === 'pending';
-    return true;
-  }).sort((a, b) => {
-    // Sort by status (pending first), then by priority, then by due date
-    if (a.status !== b.status) return a.status === 'pending' ? -1 : 1;
-    const priorityOrder = { high: 0, medium: 1, low: 2 };
-    if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
-      return priorityOrder[a.priority] - priorityOrder[b.priority];
-    }
-    return new Date(a.dueDate) - new Date(b.dueDate);
+    const matchesSearch = task.title.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesPriority = filterPriority === 'all' || task.priority === filterPriority;
+    const matchesStatus = filterStatus === 'all' || task.status === filterStatus;
+    return matchesSearch && matchesPriority && matchesStatus;
   });
 
-  const openAddModal = () => {
-    setEditingTask(null);
-    setFormData({
-      title: '',
-      description: '',
-      dueDate: new Date().toISOString().split('T')[0],
-      priority: 'medium',
-      status: 'pending',
-      assigneeId: state.currentUser?.id?.toString() || '',
-    });
-    setErrors({});
-    setShowModal(true);
+  const toggleTask = (taskId) => {
+    setTasks(prev => prev.map(t =>
+      t.id === taskId
+        ? { ...t, status: t.status === 'completed' ? 'not_started' : 'completed' }
+        : t
+    ));
   };
 
-  const openEditModal = (task) => {
-    setEditingTask(task);
-    setFormData({
-      title: task.title,
-      description: task.description || '',
-      dueDate: task.dueDate,
-      priority: task.priority,
-      status: task.status,
-      assigneeId: task.assigneeId?.toString() || '',
-    });
-    setErrors({});
-    setShowModal(true);
-    setActiveMenu(null);
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const newErrors = {};
-    
-    if (!formData.title.trim()) newErrors.title = 'Title is required';
-    if (!formData.dueDate) newErrors.dueDate = 'Due date is required';
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'completed': return 'bg-[#00A78E]';
+      case 'in_progress': return 'bg-[#3B86F0]';
+      case 'deferred': return 'bg-[#9E9E9E]';
+      default: return 'bg-[#E5E5E5]';
     }
+  };
 
-    const taskData = {
-      ...formData,
-      assigneeId: formData.assigneeId ? parseInt(formData.assigneeId) : null,
-    };
-
-    if (editingTask) {
-      updateTask({ ...editingTask, ...taskData });
-    } else {
-      addTask(taskData);
+  const getPriorityColor = (priority) => {
+    switch (priority) {
+      case 'high': return 'text-[#E52E33]';
+      case 'medium': return 'text-[#F5A623]';
+      default: return 'text-[#00A78E]';
     }
-    setShowModal(false);
-  };
-
-  const handleDelete = (id) => {
-    deleteTask(id);
-    setShowDeleteConfirm(false);
-    setActiveMenu(null);
-  };
-
-  const handleToggle = (id) => {
-    toggleTask(id);
-    setActiveMenu(null);
-  };
-
-  const getAssignee = (assigneeId) => {
-    return state.users.find(u => u.id === assigneeId);
-  };
-
-  const isOverdue = (task) => {
-    return task.status === 'pending' && new Date(task.dueDate) < new Date(new Date().toDateString());
   };
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[#1E293B]">Tasks</h1>
-          <p className="text-[#64748B] mt-1">Manage your tasks and track progress</p>
+          <h1 className="text-2xl font-semibold text-[#1A1A1A]">Tasks</h1>
+          <p className="text-sm text-[#757575]">{tasks.length} tasks total</p>
         </div>
-        <Button onClick={openAddModal}>
-          <Plus size={18} className="mr-2" />
+        <button
+          onClick={() => setShowModal(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-[#FF7A59] text-white rounded-lg hover:bg-[#E85A3C] transition-colors text-sm font-medium"
+        >
+          <Plus size={18} />
           Add Task
-        </Button>
+        </button>
       </div>
 
       {/* Filters */}
-      <Card>
-        <div className="p-4 flex flex-wrap gap-2">
-          {[
-            { value: 'all', label: 'All Tasks' },
-            { value: 'pending', label: 'Pending' },
-            { value: 'completed', label: 'Completed' },
-            { value: 'high', label: 'High Priority' },
-          ].map((option) => (
-            <button
-              key={option.value}
-              onClick={() => setFilter(option.value)}
-              className={classNames(
-                'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
-                filter === option.value
-                  ? 'bg-[#2563EB] text-white'
-                  : 'bg-[#F1F5F9] text-[#64748B] hover:bg-[#E2E8F0]'
-              )}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-      </Card>
-
-      {/* Tasks List */}
-      <Card className="overflow-hidden">
-        {filteredTasks.length === 0 ? (
-          <EmptyState
-            icon="✅"
-            title="No tasks found"
-            description={filter !== 'all' ? "Try changing your filter" : "Create your first task to get started"}
-            action={filter === 'all' && (
-              <Button onClick={openAddModal}>
-                <Plus size={18} className="mr-2" />
-                Add Task
-              </Button>
-            )}
+      <div className="flex items-center gap-4">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#A0A0A0]" size={18} />
+          <input
+            type="text"
+            placeholder="Search tasks..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-[#E5E5E5] rounded-lg text-sm focus:outline-none focus:border-[#FF7A59]"
           />
-        ) : (
-          <div className="divide-y divide-[#E2E8F0]">
-            {filteredTasks.map((task) => {
-              const assignee = getAssignee(task.assigneeId);
-              const overdue = isOverdue(task);
-              
-              return (
-                <div 
-                  key={task.id} 
-                  className={classNames(
-                    'px-5 py-4 flex items-start gap-4 hover:bg-[#F8FAFC] transition-colors',
-                    task.status === 'completed' && 'opacity-60'
-                  )}
-                >
-                  {/* Checkbox */}
-                  <button
-                    onClick={() => handleToggle(task.id)}
-                    className={classNames(
-                      'mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors flex-shrink-0',
-                      task.status === 'completed'
-                        ? 'bg-[#22C55E] border-[#22C55E] text-white'
-                        : 'border-[#CBD5E1] hover:border-[#2563EB]'
-                    )}
-                  >
-                    {task.status === 'completed' && <Check size={14} />}
-                  </button>
-
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <p className={classNames(
-                          'text-sm font-medium',
-                          task.status === 'completed' ? 'text-[#94A3B8] line-through' : 'text-[#1E293B]'
-                        )}>
-                          {task.title}
-                        </p>
-                        {task.description && (
-                          <p className="text-xs text-[#64748B] mt-1 line-clamp-2">{task.description}</p>
-                        )}
-                      </div>
-
-                      {/* Actions */}
-                      <div className="relative flex-shrink-0">
-                        <button
-                          onClick={() => setActiveMenu(activeMenu === task.id ? null : task.id)}
-                          className="p-1.5 rounded-lg hover:bg-[#F1F5F9] text-[#64748B] transition-colors"
-                        >
-                          <MoreVertical size={18} />
-                        </button>
-                        {activeMenu === task.id && (
-                          <>
-                            <div 
-                              className="fixed inset-0 z-40" 
-                              onClick={() => setActiveMenu(null)}
-                            />
-                            <div className="absolute right-0 top-full mt-1 w-40 bg-white rounded-lg shadow-lg border border-[#E2E8F0] py-1 z-50">
-                              <button
-                                onClick={() => openEditModal(task)}
-                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[#1E293B] hover:bg-[#F8FAFC] transition-colors"
-                              >
-                                <Edit2 size={16} />
-                                Edit
-                              </button>
-                              <button
-                                onClick={() => { setSelectedTask(task); setShowDeleteConfirm(true); }}
-                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[#EF4444] hover:bg-[#FEF2F2] transition-colors"
-                              >
-                                <Trash2 size={16} />
-                                Delete
-                              </button>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Meta info */}
-                    <div className="flex items-center gap-4 mt-2">
-                      {/* Priority */}
-                      <div className="flex items-center gap-1.5">
-                        <div 
-                          className="w-2 h-2 rounded-full"
-                          style={{ backgroundColor: getPriorityColor(task.priority) }}
-                        />
-                        <span className="text-xs text-[#64748B] capitalize">{task.priority}</span>
-                      </div>
-
-                      {/* Due date */}
-                      <div className={classNames(
-                        'flex items-center gap-1.5',
-                        overdue ? 'text-[#EF4444]' : 'text-[#64748B]'
-                      )}>
-                        {overdue && <AlertCircle size={14} />}
-                        <Calendar size={14} />
-                        <span className="text-xs">{formatDate(task.dueDate)}</span>
-                      </div>
-
-                      {/* Assignee */}
-                      {assignee && (
-                        <div className="flex items-center gap-1.5">
-                          <Avatar name={assignee.name} size="sm" className="w-5 h-5 text-[10px]" />
-                          <span className="text-xs text-[#64748B]">{assignee.name}</span>
-                        </div>
-                      )}
-
-                      {/* Status */}
-                      {task.status === 'completed' && (
-                        <Badge variant="success" className="text-xs">
-                          <CheckCircle2 size={12} className="mr-1" />
-                          Completed
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </Card>
-
-      {/* Quick Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <Card className="!p-4 text-center">
-          <p className="text-2xl font-bold text-[#1E293B]">{tasks.length}</p>
-          <p className="text-xs text-[#64748B]">Total Tasks</p>
-        </Card>
-        <Card className="!p-4 text-center">
-          <p className="text-2xl font-bold text-[#EF4444]">{tasks.filter(t => t.status === 'pending' && isOverdue(t)).length}</p>
-          <p className="text-xs text-[#64748B]">Overdue</p>
-        </Card>
-        <Card className="!p-4 text-center">
-          <p className="text-2xl font-bold text-[#F59E0B]">{tasks.filter(t => t.priority === 'high' && t.status === 'pending').length}</p>
-          <p className="text-xs text-[#64748B]">High Priority</p>
-        </Card>
-        <Card className="!p-4 text-center">
-          <p className="text-2xl font-bold text-[#22C55E]">{tasks.filter(t => t.status === 'completed').length}</p>
-          <p className="text-xs text-[#64748B]">Completed</p>
-        </Card>
+        </div>
+        <select
+          value={filterPriority}
+          onChange={(e) => setFilterPriority(e.target.value)}
+          className="px-4 py-2 border border-[#E5E5E5] rounded-lg text-sm bg-white"
+        >
+          <option value="all">All Priorities</option>
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
+        </select>
+        <select
+          value={filterStatus}
+          onChange={(e) => setFilterStatus(e.target.value)}
+          className="px-4 py-2 border border-[#E5E5E5] rounded-lg text-sm bg-white"
+        >
+          <option value="all">All Status</option>
+          <option value="not_started">Not Started</option>
+          <option value="in_progress">In Progress</option>
+          <option value="completed">Completed</option>
+          <option value="deferred">Deferred</option>
+        </select>
+        <div className="flex border border-[#E5E5E5] rounded-lg overflow-hidden">
+          <button
+            onClick={() => setViewMode('list')}
+            className={`px-3 py-2 text-sm ${viewMode === 'list' ? 'bg-[#FF7A59] text-white' : 'bg-white text-[#757575] hover:bg-[#F5F5F5]'}`}
+          >
+            <List size={16} />
+          </button>
+          <button
+            onClick={() => setViewMode('board')}
+            className={`px-3 py-2 text-sm ${viewMode === 'board' ? 'bg-[#FF7A59] text-white' : 'bg-white text-[#757575] hover:bg-[#F5F5F5]'}`}
+          >
+            <LayoutGrid size={16} />
+          </button>
+        </div>
       </div>
 
-      {/* Add/Edit Modal */}
-      <Modal 
-        isOpen={showModal} 
-        onClose={() => setShowModal(false)} 
-        title={editingTask ? 'Edit Task' : 'Add New Task'}
-      >
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Input
-            label="Title"
-            placeholder="Review proposal"
-            value={formData.title}
-            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-            error={errors.title}
-          />
-          
-          <Textarea
-            label="Description"
-            placeholder="Add more details..."
-            rows={3}
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          />
-
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              label="Due Date"
-              type="date"
-              value={formData.dueDate}
-              onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-              error={errors.dueDate}
-            />
-            <Select
-              label="Priority"
-              value={formData.priority}
-              onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
-            >
-              <option value="high">High</option>
-              <option value="medium">Medium</option>
-              <option value="low">Low</option>
-            </Select>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <Select
-              label="Assignee"
-              value={formData.assigneeId}
-              onChange={(e) => setFormData({ ...formData, assigneeId: e.target.value })}
-            >
-              <option value="">Unassigned</option>
-              {state.users.map(user => (
-                <option key={user.id} value={user.id}>{user.name}</option>
+      {/* List View */}
+      {viewMode === 'list' && (
+        <div className="bg-white rounded-lg border border-[#E5E5E5] overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-[#F5F5F5]">
+              <tr>
+                <th className="w-12 text-left px-4 py-3"></th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-[#757575] uppercase">Task</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-[#757575] uppercase">Due Date</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-[#757575] uppercase">Priority</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-[#757575] uppercase">Status</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-[#757575] uppercase">Owner</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredTasks.map(task => (
+                <tr key={task.id} className="border-t border-[#E5E5E5] hover:bg-[#F5F5F5] transition-colors">
+                  <td className="px-4 py-3">
+                    <button
+                      onClick={() => toggleTask(task.id)}
+                      className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                        task.status === 'completed'
+                          ? 'bg-[#00A78E] border-[#00A78E] text-white'
+                          : 'border-[#E5E5E5] hover:border-[#00A78E]'
+                      }`}
+                    >
+                      {task.status === 'completed' && <Check size={12} />}
+                    </button>
+                  </td>
+                  <td className="px-4 py-3">
+                    <p className={`font-medium ${task.status === 'completed' ? 'line-through text-[#A0A0A0]' : ''}`}>
+                      {task.title}
+                    </p>
+                    {task.description && (
+                      <p className="text-xs text-[#757575] mt-0.5 line-clamp-1">{task.description}</p>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-sm">
+                    <span className="flex items-center gap-1">
+                      <Calendar size={14} className="text-[#A0A0A0]" />
+                      {task.dueDate}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`text-sm font-medium capitalize ${getPriorityColor(task.priority)}`}>
+                      {task.priority}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="px-2 py-1 rounded-full text-xs bg-[#F5F5F5] capitalize">
+                      {task.status.replace('_', ' ')}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-sm">
+                    <span className="flex items-center gap-1">
+                      <User size={14} className="text-[#A0A0A0]" />
+                      {task.owner}
+                    </span>
+                  </td>
+                </tr>
               ))}
-            </Select>
-            <Select
-              label="Status"
-              value={formData.status}
-              onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-            >
-              <option value="pending">Pending</option>
-              <option value="completed">Completed</option>
-            </Select>
-          </div>
+            </tbody>
+          </table>
+        </div>
+      )}
 
-          <div className="flex justify-end gap-3 pt-4">
-            <Button type="button" variant="secondary" onClick={() => setShowModal(false)}>
-              Cancel
-            </Button>
-            <Button type="submit">
-              {editingTask ? 'Save Changes' : 'Add Task'}
-            </Button>
-          </div>
-        </form>
-      </Modal>
+      {/* Board View */}
+      {viewMode === 'board' && (
+        <div className="grid grid-cols-4 gap-4">
+          {taskStatuses.map(status => {
+            const statusTasks = filteredTasks.filter(t => t.status === status);
+            return (
+              <div key={status} className="bg-[#F5F5F5] rounded-lg p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-3 h-3 rounded-full ${getStatusColor(status)}`} />
+                    <h3 className="font-semibold text-sm capitalize">{status.replace('_', ' ')}</h3>
+                  </div>
+                  <span className="text-xs text-[#757575] bg-white px-2 py-0.5 rounded-full">
+                    {statusTasks.length}
+                  </span>
+                </div>
+                <div className="space-y-3">
+                  {statusTasks.map(task => (
+                    <div
+                      key={task.id}
+                      className="bg-white rounded-lg p-3 border border-[#E5E5E5] hover:shadow-md transition-shadow cursor-pointer"
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <p className="font-medium text-sm">{task.title}</p>
+                        <button
+                          onClick={() => toggleTask(task.id)}
+                          className={`p-1 rounded ${task.status === 'completed' ? 'text-[#00A78E]' : 'text-[#A0A0A0] hover:text-[#00A78E]'}`}
+                        >
+                          <Check size={14} />
+                        </button>
+                      </div>
+                      <div className="flex items-center justify-between text-xs text-[#757575]">
+                        <span className={`font-medium capitalize ${getPriorityColor(task.priority)}`}>
+                          {task.priority}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Calendar size={12} />
+                          {task.dueDate?.slice(5)}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
-      {/* Delete Confirmation */}
-      <ConfirmModal
-        isOpen={showDeleteConfirm}
-        onClose={() => setShowDeleteConfirm(false)}
-        onConfirm={() => handleDelete(selectedTask?.id)}
-        title="Delete Task"
-        message={`Are you sure you want to delete "${selectedTask?.title}"? This action cannot be undone.`}
-      />
+      {/* Add Task Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-lg">
+            <div className="p-6 border-b border-[#E5E5E5]">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold">Add New Task</h2>
+                <button onClick={() => setShowModal(false)} className="p-2 hover:bg-[#F5F5F5] rounded-lg">
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-[#757575] mb-1">Task Title *</label>
+                <input type="text" className="w-full px-3 py-2 border border-[#E5E5E5] rounded-lg text-sm focus:outline-none focus:border-[#FF7A59]" placeholder="What needs to be done?" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-[#757575] mb-1">Description</label>
+                <textarea className="w-full px-3 py-2 border border-[#E5E5E5] rounded-lg text-sm focus:outline-none focus:border-[#FF7A59] h-24 resize-none" placeholder="Add more details..." />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-[#757575] mb-1">Due Date</label>
+                  <input type="date" className="w-full px-3 py-2 border border-[#E5E5E5] rounded-lg text-sm focus:outline-none focus:border-[#FF7A59]" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-[#757575] mb-1">Priority</label>
+                  <select className="w-full px-3 py-2 border border-[#E5E5E5] rounded-lg text-sm focus:outline-none focus:border-[#FF7A59]">
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                    <option value="low">Low</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-[#757575] mb-1">Owner</label>
+                <input type="text" value="John Doe" className="w-full px-3 py-2 border border-[#E5E5E5] rounded-lg text-sm bg-[#F5F5F5]" readOnly />
+              </div>
+            </div>
+            <div className="p-4 border-t border-[#E5E5E5] flex justify-end gap-3">
+              <button onClick={() => setShowModal(false)} className="px-4 py-2 text-sm border border-[#E5E5E5] rounded-lg hover:bg-[#F5F5F5]">
+                Cancel
+              </button>
+              <button className="px-4 py-2 text-sm bg-[#FF7A59] text-white rounded-lg hover:bg-[#E85A3C]">
+                Create Task
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,376 +1,240 @@
 import { useState } from 'react';
-import { Plus, GripVertical, Calendar, DollarSign } from 'lucide-react';
-import { useDeals, useContacts } from '../context/CrmContext';
-import { Card, Button, Input, Textarea, Select, Modal, Badge } from '../components/ui';
-import { formatCurrency, formatDate, getStageColor, classNames } from '../utils/helpers';
-import { dealStages } from '../data/mockData';
-import {
-  DndContext,
-  DragOverlay,
-  closestCorners,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-} from '@dnd-kit/core';
-import {
-  SortableContext,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-  useSortable,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-
-function DealCard({ deal, contact, onClick }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: deal.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={classNames(
-        'bg-white rounded-lg border border-[#E2E8F0] p-3 cursor-pointer transition-all hover:shadow-md',
-        isDragging && 'opacity-50 shadow-lg'
-      )}
-      onClick={onClick}
-    >
-      <div className="flex items-start gap-2">
-        <button
-          className="mt-1 p-0.5 text-[#CBD5E1] hover:text-[#64748B] cursor-grab active:cursor-grabbing"
-          {...attributes}
-          {...listeners}
-        >
-          <GripVertical size={16} />
-        </button>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-[#1E293B] truncate">{deal.title}</p>
-          {contact && (
-            <p className="text-xs text-[#64748B] mt-0.5 truncate">{contact.name}</p>
-          )}
-          <div className="flex items-center justify-between mt-2">
-            <span className="text-sm font-semibold text-[#10B981]">{formatCurrency(deal.value)}</span>
-            <Badge 
-              variant={
-                deal.probability === 100 ? 'success' :
-                deal.probability >= 50 ? 'warning' : 'default'
-              }
-              className="text-xs"
-            >
-              {deal.probability}%
-            </Badge>
-          </div>
-          <div className="flex items-center gap-1 mt-2 text-xs text-[#94A3B8]">
-            <Calendar size={12} />
-            {formatDate(deal.expectedClose)}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+import { Plus, DollarSign, Calendar, User, GripVertical, X, LayoutGrid, List } from 'lucide-react';
+import { deals as initialDeals, dealStages, getContactById, getCompanyById } from '../data/mockData';
 
 export function Deals() {
-  const { deals, addDeal, updateDeal, deleteDeal, moveDeal } = useDeals();
-  const { contacts } = useContacts();
+  const [deals, setDeals] = useState(initialDeals);
+  const [viewMode, setViewMode] = useState('board');
   const [showModal, setShowModal] = useState(false);
-  const [editingDeal, setEditingDeal] = useState(null);
-  const [activeId, setActiveId] = useState(null);
-  const [formData, setFormData] = useState({
-    title: '',
-    value: '',
-    stage: 'Lead',
-    contactId: '',
-    probability: 20,
-    expectedClose: '',
-  });
-  const [errors, setErrors] = useState({});
+  const [draggedDeal, setDraggedDeal] = useState(null);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
-
-  const getDealsByStage = (stage) => deals.filter(deal => deal.stage === stage);
-  
-  const getContact = (contactId) => contacts.find(c => c.id === contactId);
-
-  const getStageTotal = (stage) => {
-    return getDealsByStage(stage).reduce((sum, deal) => sum + deal.value, 0);
+  const handleDragStart = (e, deal) => {
+    setDraggedDeal(deal);
+    e.dataTransfer.effectAllowed = 'move';
   };
 
-  const handleDragStart = (event) => {
-    setActiveId(event.active.id);
-  };
-
-  const handleDragEnd = (event) => {
-    const { active, over } = event;
-    setActiveId(null);
-
-    if (!over) return;
-
-    const dealId = active.id;
-    const overId = over.id;
-
-    // Check if dropped on a stage column
-    if (dealStages.includes(overId)) {
-      moveDeal(dealId, overId);
-    } else {
-      // Find the deal that was dropped over
-      const overDeal = deals.find(d => d.id === overId);
-      if (overDeal && overDeal.stage !== deals.find(d => d.id === dealId)?.stage) {
-        moveDeal(dealId, overDeal.stage);
-      }
-    }
-  };
-
-  const openAddModal = (stage) => {
-    setEditingDeal(null);
-    setFormData({
-      title: '',
-      value: '',
-      stage: stage || 'Lead',
-      contactId: '',
-      probability: 20,
-      expectedClose: '',
-    });
-    setErrors({});
-    setShowModal(true);
-  };
-
-  const openEditModal = (deal) => {
-    setEditingDeal(deal);
-    setFormData({
-      title: deal.title,
-      value: deal.value.toString(),
-      stage: deal.stage,
-      contactId: deal.contactId?.toString() || '',
-      probability: deal.probability,
-      expectedClose: deal.expectedClose,
-    });
-    setErrors({});
-    setShowModal(true);
-  };
-
-  const handleSubmit = (e) => {
+  const handleDragOver = (e) => {
     e.preventDefault();
-    const newErrors = {};
-    
-    if (!formData.title.trim()) newErrors.title = 'Title is required';
-    if (!formData.value || parseFloat(formData.value) <= 0) newErrors.value = 'Valid value is required';
-    if (!formData.expectedClose) newErrors.expectedClose = 'Expected close date is required';
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
-
-    const dealData = {
-      title: formData.title,
-      value: parseFloat(formData.value),
-      stage: formData.stage,
-      contactId: formData.contactId ? parseInt(formData.contactId) : null,
-      probability: parseInt(formData.probability),
-      expectedClose: formData.expectedClose,
-    };
-
-    if (editingDeal) {
-      updateDeal({ ...editingDeal, ...dealData });
-    } else {
-      addDeal(dealData);
-    }
-    setShowModal(false);
   };
 
-  const activeDeal = activeId ? deals.find(d => d.id === activeId) : null;
+  const handleDrop = (e, stageId) => {
+    e.preventDefault();
+    if (draggedDeal && draggedDeal.stage !== stageId) {
+      setDeals(prev => prev.map(d =>
+        d.id === draggedDeal.id ? { ...d, stage: stageId } : d
+      ));
+    }
+    setDraggedDeal(null);
+  };
+
+  const getStageColor = (stageId) => {
+    const stage = dealStages.find(s => s.id === stageId);
+    return stage?.color || '#9E9E9E';
+  };
+
+  const wonDeals = deals.filter(d => d.stage === 'closedWon');
+  const lostDeals = deals.filter(d => d.stage === 'closedLost');
+  const openDeals = deals.filter(d => !['closedWon', 'closedLost'].includes(d.stage));
+  const totalPipeline = openDeals.reduce((sum, d) => sum + d.amount, 0);
+  const totalWon = wonDeals.reduce((sum, d) => sum + d.amount, 0);
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[#1E293B]">Deal Pipeline</h1>
-          <p className="text-[#64748B] mt-1">Manage your deals across stages</p>
+          <h1 className="text-2xl font-semibold text-[#1A1A1A]">Deals</h1>
+          <p className="text-sm text-[#757575]">{deals.length} deals total</p>
         </div>
-        <Button onClick={() => openAddModal()}>
-          <Plus size={18} className="mr-2" />
-          Add Deal
-        </Button>
+        <div className="flex items-center gap-4">
+          {/* View Toggle */}
+          <div className="flex border border-[#E5E5E5] rounded-lg overflow-hidden">
+            <button
+              onClick={() => setViewMode('board')}
+              className={`px-3 py-1.5 text-sm ${viewMode === 'board' ? 'bg-[#FF7A59] text-white' : 'bg-white text-[#757575] hover:bg-[#F5F5F5]'}`}
+            >
+              <LayoutGrid size={16} />
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              className={`px-3 py-1.5 text-sm ${viewMode === 'list' ? 'bg-[#FF7A59] text-white' : 'bg-white text-[#757575] hover:bg-[#F5F5F5]'}`}
+            >
+              <List size={16} />
+            </button>
+          </div>
+          <button
+            onClick={() => setShowModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-[#FF7A59] text-white rounded-lg hover:bg-[#E85A3C] transition-colors text-sm font-medium"
+          >
+            <Plus size={18} />
+            Add Deal
+          </button>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-4 gap-4">
+        <div className="bg-white rounded-lg border border-[#E5E5E5] p-4">
+          <p className="text-sm text-[#757575]">Open Pipeline</p>
+          <p className="text-2xl font-bold text-[#1A1A1A]">${(totalPipeline / 1000).toFixed(0)}K</p>
+        </div>
+        <div className="bg-white rounded-lg border border-[#E5E5E5] p-4">
+          <p className="text-sm text-[#757575]">Closed Won</p>
+          <p className="text-2xl font-bold text-[#00A78E]">${(totalWon / 1000).toFixed(0)}K</p>
+        </div>
+        <div className="bg-white rounded-lg border border-[#E5E5E5] p-4">
+          <p className="text-sm text-[#757575]">Active Deals</p>
+          <p className="text-2xl font-bold text-[#1A1A1A]">{openDeals.length}</p>
+        </div>
+        <div className="bg-white rounded-lg border border-[#E5E5E5] p-4">
+          <p className="text-sm text-[#757575]">Win Rate</p>
+          <p className="text-2xl font-bold text-[#3B86F0]">{wonDeals.length + lostDeals.length > 0 ? Math.round((wonDeals.length / (wonDeals.length + lostDeals.length)) * 100) : 0}%</p>
+        </div>
       </div>
 
       {/* Pipeline Board */}
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCorners}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-      >
-        <div className="flex gap-4 overflow-x-auto pb-4 -mx-6 px-6">
-          {dealStages.map((stage) => (
-            <div
-              key={stage}
-              className="flex-shrink-0 w-72"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div 
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: getStageColor(stage) }}
-                  />
-                  <h3 className="font-semibold text-[#1E293B]">{stage}</h3>
-                  <span className="text-xs text-[#94A3B8] bg-[#F1F5F9] px-2 py-0.5 rounded-full">
-                    {getDealsByStage(stage).length}
-                  </span>
-                </div>
-              </div>
-              
-              <div className="text-xs font-medium text-[#10B981] mb-3 px-1">
-                {formatCurrency(getStageTotal(stage))}
-              </div>
+      <div className="overflow-x-auto pb-4">
+        <div className="flex gap-4 min-w-max">
+          {dealStages.map(stage => {
+            const stageDeals = deals.filter(d => d.stage === stage.id);
+            const stageTotal = stageDeals.reduce((sum, d) => sum + d.amount, 0);
 
-              <SortableContext
-                items={getDealsByStage(stage).map(d => d.id)}
-                strategy={verticalListSortingStrategy}
+            return (
+              <div
+                key={stage.id}
+                className="w-72 flex-shrink-0"
+                onDragOver={handleDragOver}
+                onDrop={(e) => handleDrop(e, stage.id)}
               >
-                <div className="space-y-2 min-h-[200px]">
-                  {getDealsByStage(stage).map((deal) => (
-                    <DealCard
-                      key={deal.id}
-                      deal={deal}
-                      contact={getContact(deal.contactId)}
-                      onClick={() => openEditModal(deal)}
-                    />
-                  ))}
-                  
-                  {getDealsByStage(stage).length === 0 && (
-                    <div 
-                      className="border-2 border-dashed border-[#E2E8F0] rounded-lg p-4 text-center"
-                      onClick={() => openAddModal(stage)}
-                    >
-                      <p className="text-sm text-[#94A3B8]">Drop deals here</p>
+                <div className="bg-[#F5F5F5] rounded-lg p-3">
+                  {/* Column Header */}
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: stage.color }} />
+                      <h3 className="font-semibold text-sm">{stage.name}</h3>
+                      <span className="text-xs text-[#757575] bg-white px-2 py-0.5 rounded-full">
+                        {stageDeals.length}
+                      </span>
                     </div>
-                  )}
-                </div>
-              </SortableContext>
+                  </div>
+                  <p className="text-xs text-[#757575] mb-3">${(stageTotal / 1000).toFixed(0)}K</p>
 
-              <button
-                onClick={() => openAddModal(stage)}
-                className="w-full mt-2 py-2 text-sm text-[#64748B] hover:text-[#2563EB] hover:bg-[#F8FAFC] rounded-lg transition-colors flex items-center justify-center gap-1"
-              >
-                <Plus size={16} />
-                Add deal
+                  {/* Cards */}
+                  <div className="space-y-2 min-h-[200px]">
+                    {stageDeals.map(deal => {
+                      const contact = getContactById(deal.contactId);
+                      return (
+                        <div
+                          key={deal.id}
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, deal)}
+                          className={`bg-white rounded-lg p-3 border border-[#E5E5E5] cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow ${
+                            draggedDeal?.id === deal.id ? 'opacity-50' : ''
+                          }`}
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <p className="font-medium text-sm line-clamp-2">{deal.title}</p>
+                            <GripVertical size={14} className="text-[#A0A0A0] flex-shrink-0" />
+                          </div>
+                          <p className="text-lg font-bold text-[#1A1A1A] mb-2">${(deal.amount / 1000).toFixed(0)}K</p>
+                          <div className="flex items-center justify-between text-xs text-[#757575]">
+                            <span className="flex items-center gap-1">
+                              <User size={12} />
+                              {contact ? `${contact.firstName} ${contact.lastName[0]}.` : 'Unknown'}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Calendar size={12} />
+                              {deal.closeDate?.slice(5)}
+                            </span>
+                          </div>
+                          <div className="mt-2">
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1 h-1.5 bg-[#E5E5E5] rounded-full overflow-hidden">
+                                <div
+                                  className="h-full rounded-full"
+                                  style={{ width: `${deal.probability}%`, backgroundColor: stage.color }}
+                                />
+                              </div>
+                              <span className="text-xs text-[#A0A0A0]">{deal.probability}%</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Add Deal Button */}
+                  <button className="w-full mt-2 p-2 border border-dashed border-[#E5E5E5] rounded-lg text-sm text-[#757575] hover:border-[#FF7A59] hover:text-[#FF7A59] transition-colors flex items-center justify-center gap-1">
+                    <Plus size={14} />
+                    Add deal
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Add Deal Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-lg">
+            <div className="p-6 border-b border-[#E5E5E5]">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold">Add New Deal</h2>
+                <button onClick={() => setShowModal(false)} className="p-2 hover:bg-[#F5F5F5] rounded-lg">
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-[#757575] mb-1">Deal Title *</label>
+                <input type="text" className="w-full px-3 py-2 border border-[#E5E5E5] rounded-lg text-sm focus:outline-none focus:border-[#FF7A59]" placeholder="e.g., Enterprise License Agreement" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-[#757575] mb-1">Amount *</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#757575]">$</span>
+                    <input type="number" className="w-full pl-7 pr-3 py-2 border border-[#E5E5E5] rounded-lg text-sm focus:outline-none focus:border-[#FF7A59]" placeholder="0" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-[#757575] mb-1">Stage</label>
+                  <select className="w-full px-3 py-2 border border-[#E5E5E5] rounded-lg text-sm focus:outline-none focus:border-[#FF7A59]">
+                    {dealStages.filter(s => !['closedWon', 'closedLost'].includes(s.id)).map(stage => (
+                      <option key={stage.id} value={stage.id}>{stage.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-[#757575] mb-1">Close Date</label>
+                  <input type="date" className="w-full px-3 py-2 border border-[#E5E5E5] rounded-lg text-sm focus:outline-none focus:border-[#FF7A59]" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-[#757575] mb-1">Probability</label>
+                  <input type="number" className="w-full px-3 py-2 border border-[#E5E5E5] rounded-lg text-sm focus:outline-none focus:border-[#FF7A59]" placeholder="50" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-[#757575] mb-1">Owner</label>
+                <input type="text" value="John Doe" className="w-full px-3 py-2 border border-[#E5E5E5] rounded-lg text-sm bg-[#F5F5F5]" readOnly />
+              </div>
+            </div>
+            <div className="p-4 border-t border-[#E5E5E5] flex justify-end gap-3">
+              <button onClick={() => setShowModal(false)} className="px-4 py-2 text-sm border border-[#E5E5E5] rounded-lg hover:bg-[#F5F5F5]">
+                Cancel
+              </button>
+              <button className="px-4 py-2 text-sm bg-[#FF7A59] text-white rounded-lg hover:bg-[#E85A3C]">
+                Create Deal
               </button>
             </div>
-          ))}
+          </div>
         </div>
-
-        <DragOverlay>
-          {activeDeal && (
-            <div className="bg-white rounded-lg border border-[#2563EB] shadow-xl p-3 w-72">
-              <p className="text-sm font-medium text-[#1E293B]">{activeDeal.title}</p>
-              <p className="text-sm font-semibold text-[#10B981]">{formatCurrency(activeDeal.value)}</p>
-            </div>
-          )}
-        </DragOverlay>
-      </DndContext>
-
-      {/* Add/Edit Modal */}
-      <Modal 
-        isOpen={showModal} 
-        onClose={() => setShowModal(false)} 
-        title={editingDeal ? 'Edit Deal' : 'Add New Deal'}
-      >
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Input
-            label="Deal Title"
-            placeholder="Enterprise License"
-            value={formData.title}
-            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-            error={errors.title}
-          />
-          
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              label="Value"
-              type="number"
-              placeholder="50000"
-              value={formData.value}
-              onChange={(e) => setFormData({ ...formData, value: e.target.value })}
-              error={errors.value}
-            />
-            <Select
-              label="Stage"
-              value={formData.stage}
-              onChange={(e) => setFormData({ ...formData, stage: e.target.value })}
-            >
-              {dealStages.map(stage => (
-                <option key={stage} value={stage}>{stage}</option>
-              ))}
-            </Select>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <Select
-              label="Contact"
-              value={formData.contactId}
-              onChange={(e) => setFormData({ ...formData, contactId: e.target.value })}
-            >
-              <option value="">Select contact</option>
-              {contacts.map(contact => (
-                <option key={contact.id} value={contact.id}>{contact.name}</option>
-              ))}
-            </Select>
-            <Input
-              label="Expected Close"
-              type="date"
-              value={formData.expectedClose}
-              onChange={(e) => setFormData({ ...formData, expectedClose: e.target.value })}
-              error={errors.expectedClose}
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wide mb-1.5">
-              Probability: {formData.probability}%
-            </label>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              step="5"
-              value={formData.probability}
-              onChange={(e) => setFormData({ ...formData, probability: e.target.value })}
-              className="w-full h-2 bg-[#E2E8F0] rounded-lg appearance-none cursor-pointer accent-[#2563EB]"
-            />
-          </div>
-
-          <div className="flex justify-end gap-3 pt-4">
-            <Button type="button" variant="secondary" onClick={() => setShowModal(false)}>
-              Cancel
-            </Button>
-            <Button type="submit">
-              {editingDeal ? 'Save Changes' : 'Add Deal'}
-            </Button>
-          </div>
-        </form>
-      </Modal>
+      )}
     </div>
   );
 }
